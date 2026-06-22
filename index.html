@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#0F172A" />
+    <meta name="description" content="Node.js 基础接口配置管理平台 - 高性能 API 配置中心" />
+    <title>API Config Console - 接口配置管理</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+
+    <link
+      rel="preload"
+      as="style"
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap"
+    />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap"
+      media="print"
+      onload="this.media='all'"
+    />
+
+    <link rel="preload" as="image" href="/favicon.svg" fetchpriority="high" />
+
+    <style>
+      html, body { margin: 0; padding: 0; background: #0F172A; }
+      #root-skeleton {
+        position: fixed; inset: 0; background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%);
+        display: flex; align-items: center; justify-content: center; z-index: 9999;
+      }
+      .sk-logo {
+        width: 48px; height: 48px; border-radius: 12px;
+        background: linear-gradient(135deg, #0EA5E9, #0284C7);
+        margin-bottom: 24px; animation: pulse 1.5s ease-in-out infinite;
+      }
+      .sk-bar {
+        height: 8px; border-radius: 4px; margin-bottom: 12px;
+        background: linear-gradient(90deg, #1E293B 25%, #334155 50%, #1E293B 75%);
+        background-size: 200% 100%; animation: shimmer 1.5s linear infinite;
+      }
+      .sk-bar-1 { width: 200px; margin-left: auto; margin-right: auto; }
+      .sk-bar-2 { width: 140px; margin-left: auto; margin-right: auto; opacity: 0.7; }
+      @keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+      @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
+    </style>
+  </head>
+  <body>
+    <div id="root-skeleton">
+      <div style="text-align: center;">
+        <div class="sk-logo" style="margin-left: auto; margin-right: auto;"></div>
+        <div class="sk-bar sk-bar-1"></div>
+        <div class="sk-bar sk-bar-2"></div>
+      </div>
+    </div>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+    <script>
+      window.addEventListener('load', function() {
+        const sk = document.getElementById('root-skeleton');
+        if (sk) { setTimeout(function() { sk.style.opacity = '0'; sk.style.transition = 'opacity 0.3s'; setTimeout(function() { sk.remove(); }, 300); }, 200); }
+      });
+    </script>
+  </body>
+</html>
