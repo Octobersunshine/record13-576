@@ -48,6 +48,7 @@ export const useApiStore = create<ApiState>((set, get) => ({
           if (!res.ok) throw new Error('Failed to fetch');
           return res.json();
         },
+        url,
       );
       set({ configs: data, loading: false });
     } catch {
@@ -65,6 +66,7 @@ export const useApiStore = create<ApiState>((set, get) => ({
           if (!res.ok) throw new Error('Failed to fetch');
           return res.json();
         },
+        '/api/stats',
       );
       set({ stats: data });
     } catch {
@@ -83,6 +85,7 @@ export const useApiStore = create<ApiState>((set, get) => ({
           if (!res.ok) throw new Error('Not found');
           return res.json();
         },
+        `/api/configs/${id}`,
       );
       set({ currentDetail: data, detailLoading: false });
     } catch {
@@ -99,6 +102,7 @@ export const useApiStore = create<ApiState>((set, get) => ({
         if (!res.ok) throw new Error('Not found');
         return res.json();
       },
+      `/api/configs/${id}`,
     );
   },
 

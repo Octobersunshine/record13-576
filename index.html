@@ -27,6 +27,44 @@
 
     <script>
       (function() {
+        var BLACKLIST = [
+          /doubleclick\.net/, /googleadservices\.com/, /googlesyndication\.com/,
+          /facebook\.net\/.*\/fbevents/, /analytics\.google\.com/, /hotjar\.com/,
+          /adservice\.google/, /amazon-adsystem\.com/, /adnxs\.com/,
+          /ads\.twitter\.com/, /track\./, /ads?\./, /pixel\./, /beacon\./,
+          /telemetry\./, /collect\?/, /cdn\.amplitude\.com/, /sentry\.io/
+        ];
+        function isBlocked(url) {
+          if (!url) return false;
+          for (var i = 0; i < BLACKLIST.length; i++) {
+            if (BLACKLIST[i].test(url)) return true;
+          }
+          return false;
+        }
+        function checkLink(el) {
+          var rel = (el.getAttribute('rel') || '').toLowerCase();
+          if (rel === 'preload' || rel === 'prefetch' || rel === 'preconnect' || rel === 'modulepreload') {
+            var href = el.getAttribute('href') || '';
+            if (isBlocked(href)) {
+              el.remove();
+              console.warn('[PreloadPolicy] 运行时拦截: ' + href);
+            }
+          }
+        }
+        document.querySelectorAll('link[rel="preload"],link[rel="prefetch"],link[rel="preconnect"]').forEach(checkLink);
+        var observer = new MutationObserver(function(mutations) {
+          mutations.forEach(function(m) {
+            m.addedNodes.forEach(function(node) {
+              if (node.nodeName === 'LINK') checkLink(node);
+            });
+          });
+        });
+        observer.observe(document.head, { childList: true });
+      })();
+    </script>
+
+    <script>
+      (function() {
         if ('requestIdleCallback' in window) {
           requestIdleCallback(function() {
             var l = document.createElement('link');

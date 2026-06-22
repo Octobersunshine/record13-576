@@ -3,6 +3,31 @@ import react from '@vitejs/plugin-react'
 import tsconfigPaths from "vite-tsconfig-paths";
 import { traeBadgePlugin } from 'vite-plugin-trae-solo-badge';
 
+const PRELOAD_BLACKLIST = [
+  /doubleclick\.net/,
+  /googleadservices\.com/,
+  /googlesyndication\.com/,
+  /facebook\.net\/.*\/fbevents/,
+  /analytics\.google\.com/,
+  /hotjar\.com/,
+  /adservice\.google/,
+  /amazon-adsystem\.com/,
+  /adnxs\.com/,
+  /ads\.twitter\.com/,
+  /track\./,
+  /ads?\./,
+  /pixel\./,
+  /beacon\./,
+  /telemetry\./,
+  /collect\?/,
+  /cdn\.amplitude\.com/,
+  /sentry\.io/,
+];
+
+function isPreloadBlacklisted(url: string): boolean {
+  return PRELOAD_BLACKLIST.some((pattern) => pattern.test(url));
+}
+
 export default defineConfig({
   plugins: [
     react({
@@ -22,6 +47,24 @@ export default defineConfig({
       autoThemeTarget: '#root'
     }), 
     tsconfigPaths(),
+    {
+      name: 'preload-blacklist',
+      transformIndexHtml: {
+        order: 'post',
+        handler(html) {
+          return html.replace(
+            /<link[^>]*rel=["'](?:preload|prefetch|preconnect|modulepreload)["'][^>]*>/gi,
+            (match) => {
+              const hrefMatch = match.match(/href=["']([^"']+)["']/);
+              if (hrefMatch && isPreloadBlacklisted(hrefMatch[1])) {
+                return `<!-- [PreloadPolicy] 已屏蔽: ${hrefMatch[1]} -->`;
+              }
+              return match;
+            },
+          );
+        },
+      },
+    },
   ],
   server: {
     proxy: {
@@ -39,7 +82,9 @@ export default defineConfig({
     modulePreload: {
       polyfill: false,
       resolveDependencies: (_filename, deps) => {
-        return deps.slice(0, 3);
+        return deps
+          .filter((dep) => !isPreloadBlacklisted(dep))
+          .slice(0, 3);
       },
     },
     rollupOptions: {

@@ -1,3 +1,5 @@
+import { checkPreloadAllowed } from './preloadPolicy';
+
 type Priority = 'critical' | 'high' | 'normal' | 'low';
 
 interface Task<T> {
@@ -7,6 +9,7 @@ interface Task<T> {
   resolve: (value: T) => void;
   reject: (reason?: unknown) => void;
   timestamp: number;
+  url?: string;
 }
 
 const PRIORITY_ORDER: Record<Priority, number> = {
@@ -22,9 +25,12 @@ class ResourceLoader {
   private queue: Task<unknown>[] = [];
   private running = new Set<string>();
   private cache = new Map<string, unknown>();
+  private blockedCount: number = 0;
+  private mode: 'whitelist' | 'blacklist' | 'both';
 
-  constructor(maxConcurrent: number = 4) {
+  constructor(maxConcurrent: number = 4, mode: 'whitelist' | 'blacklist' | 'both' = 'blacklist') {
     this.maxConcurrent = Math.max(1, Math.min(maxConcurrent, 6));
+    this.mode = mode;
   }
 
   private sortQueue() {
@@ -34,6 +40,21 @@ class ResourceLoader {
       if (pa !== pb) return pa - pb;
       return a.timestamp - b.timestamp;
     });
+  }
+
+  private checkUrl(url: string | undefined): boolean {
+    if (!url) return true;
+    const { verdict, reason } = checkPreloadAllowed(url, this.mode);
+    if (verdict !== 'allowed') {
+      this.blockedCount++;
+      if (import.meta.env.DEV) {
+        console.warn(
+          `[PreloadPolicy] 已拦截: ${url}\n原因: ${reason || '未知'}`,
+        );
+      }
+      return false;
+    }
+    return true;
   }
 
   private async processNext() {
@@ -49,6 +70,12 @@ class ResourceLoader {
 
     if (this.cache.has(task.id)) {
       task.resolve(this.cache.get(task.id) as never);
+      this.processNext();
+      return;
+    }
+
+    if (task.url && !this.checkUrl(task.url)) {
+      task.reject(new Error(`预加载被策略拦截: ${task.url}`));
       this.processNext();
       return;
     }
@@ -69,9 +96,18 @@ class ResourceLoader {
     }
   }
 
-  load<T>(id: string, priority: Priority, loader: () => Promise<T>): Promise<T> {
+  load<T>(
+    id: string,
+    priority: Priority,
+    loader: () => Promise<T>,
+    url?: string,
+  ): Promise<T> {
     if (this.cache.has(id)) {
       return Promise.resolve(this.cache.get(id) as T);
+    }
+
+    if (url && !this.checkUrl(url)) {
+      return Promise.reject(new Error(`预加载被策略拦截: ${url}`));
     }
 
     return new Promise<T>((resolve, reject) => {
@@ -82,14 +118,20 @@ class ResourceLoader {
         resolve: resolve as (value: unknown) => void,
         reject,
         timestamp: Date.now(),
+        url,
       });
       this.processNext();
     });
   }
 
-  preload<T>(id: string, priority: Priority, loader: () => Promise<T>): void {
+  preload<T>(
+    id: string,
+    priority: Priority,
+    loader: () => Promise<T>,
+    url?: string,
+  ): void {
     if (!this.cache.has(id) && !this.running.has(id)) {
-      this.load(id, priority, loader).catch(() => {});
+      this.load(id, priority, loader, url).catch(() => {});
     }
   }
 
@@ -101,23 +143,33 @@ class ResourceLoader {
     return this.queue.length;
   }
 
+  getBlockedCount(): number {
+    return this.blockedCount;
+  }
+
   clearCache(): void {
     this.cache.clear();
   }
 }
 
-export const resourceLoader = new ResourceLoader(4);
+export const resourceLoader = new ResourceLoader(4, 'blacklist');
 
 export async function loadWithPriority<T>(
   id: string,
   priority: Priority,
   loader: () => Promise<T>,
+  url?: string,
 ): Promise<T> {
-  return resourceLoader.load(id, priority, loader);
+  return resourceLoader.load(id, priority, loader, url);
 }
 
-export function prefetchResource<T>(id: string, priority: Priority, loader: () => Promise<T>): void {
-  resourceLoader.preload(id, priority, loader);
+export function prefetchResource<T>(
+  id: string,
+  priority: Priority,
+  loader: () => Promise<T>,
+  url?: string,
+): void {
+  resourceLoader.preload(id, priority, loader, url);
 }
 
 export async function concurrentAll<T>(
