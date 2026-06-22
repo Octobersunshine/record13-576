@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { loadWithPriority, prefetchResource } from '@/utils/resourceLoader';
 import type { ApiConfig, Stats, ApiListQuery, HttpMethod, ApiStatus } from '@@/shared/types';
 
 interface ApiState {
@@ -11,6 +12,7 @@ interface ApiState {
   fetchConfigs: (query?: ApiListQuery) => Promise<void>;
   fetchStats: () => Promise<void>;
   fetchDetail: (id: string) => Promise<void>;
+  prefetchDetail: (id: string) => void;
   createConfig: (data: Partial<ApiConfig>) => Promise<ApiConfig | null>;
   updateConfig: (id: string, data: Partial<ApiConfig>) => Promise<ApiConfig | null>;
   deleteConfig: (id: string) => Promise<boolean>;
@@ -36,13 +38,18 @@ export const useApiStore = create<ApiState>((set, get) => ({
       if (merged.method && merged.method !== 'ALL') params.set('method', merged.method);
       if (merged.status && merged.status !== 'ALL') params.set('status', merged.status);
       const qs = params.toString();
-      const res = await fetch(`/api/configs${qs ? `?${qs}` : ''}`);
-      if (res.ok) {
-        const data = await res.json();
-        set({ configs: data, loading: false });
-      } else {
-        set({ loading: false });
-      }
+      const url = `/api/configs${qs ? `?${qs}` : ''}`;
+
+      const data = await loadWithPriority<ApiConfig[]>(
+        `configs:${qs || 'all'}`,
+        query ? 'high' : 'critical',
+        async () => {
+          const res = await fetch(url);
+          if (!res.ok) throw new Error('Failed to fetch');
+          return res.json();
+        },
+      );
+      set({ configs: data, loading: false });
     } catch {
       set({ loading: false });
     }
@@ -50,11 +57,16 @@ export const useApiStore = create<ApiState>((set, get) => ({
 
   fetchStats: async () => {
     try {
-      const res = await fetch('/api/stats');
-      if (res.ok) {
-        const data = await res.json();
-        set({ stats: data });
-      }
+      const data = await loadWithPriority<Stats>(
+        'stats',
+        'critical',
+        async () => {
+          const res = await fetch('/api/stats');
+          if (!res.ok) throw new Error('Failed to fetch');
+          return res.json();
+        },
+      );
+      set({ stats: data });
     } catch {
       /* ignore */
     }
@@ -63,16 +75,31 @@ export const useApiStore = create<ApiState>((set, get) => ({
   fetchDetail: async (id: string) => {
     set({ detailLoading: true });
     try {
-      const res = await fetch(`/api/configs/${id}`);
-      if (res.ok) {
-        const data = await res.json();
-        set({ currentDetail: data, detailLoading: false });
-      } else {
-        set({ detailLoading: false });
-      }
+      const data = await loadWithPriority<ApiConfig>(
+        `config:${id}`,
+        'high',
+        async () => {
+          const res = await fetch(`/api/configs/${id}`);
+          if (!res.ok) throw new Error('Not found');
+          return res.json();
+        },
+      );
+      set({ currentDetail: data, detailLoading: false });
     } catch {
       set({ detailLoading: false });
     }
+  },
+
+  prefetchDetail: (id: string) => {
+    prefetchResource<ApiConfig>(
+      `config:${id}`,
+      'low',
+      async () => {
+        const res = await fetch(`/api/configs/${id}`);
+        if (!res.ok) throw new Error('Not found');
+        return res.json();
+      },
+    );
   },
 
   createConfig: async (data) => {

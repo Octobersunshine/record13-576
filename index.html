@@ -9,10 +9,10 @@
     <title>API Config Console - 接口配置管理</title>
 
     <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="dns-prefetch" href="https://fonts.gstatic.com" />
 
     <link
-      rel="preload"
+      rel="prefetch"
       as="style"
       href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap"
     />
@@ -24,6 +24,20 @@
     />
 
     <link rel="preload" as="image" href="/favicon.svg" fetchpriority="high" />
+
+    <script>
+      (function() {
+        if ('requestIdleCallback' in window) {
+          requestIdleCallback(function() {
+            var l = document.createElement('link');
+            l.rel = 'preload';
+            l.as = 'script';
+            l.href = '/src/main.tsx';
+            document.head.appendChild(l);
+          }, { timeout: 1000 });
+        }
+      })();
+    </script>
 
     <style>
       html, body { margin: 0; padding: 0; background: #0F172A; }

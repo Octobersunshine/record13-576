@@ -1,6 +1,6 @@
 import { Calendar, ChevronRight, Clock } from 'lucide-react';
 import type { ApiConfig } from '@@/shared/types';
-import { getMethodBadgeClass, getStatusBadgeClass, getStatusText } from '@/store/apiStore';
+import { getMethodBadgeClass, getStatusBadgeClass, getStatusText, useApiStore } from '@/store/apiStore';
 
 interface ApiCardProps {
   config: ApiConfig;
@@ -9,9 +9,14 @@ interface ApiCardProps {
 }
 
 export default function ApiCard({ config, onClick, index }: ApiCardProps) {
+  const prefetchDetail = useApiStore((s) => s.prefetchDetail);
+  const handleMouseEnter = () => {
+    prefetchDetail(config.id);
+  };
   return (
     <button
       onClick={onClick}
+      onMouseEnter={handleMouseEnter}
       className="card card-hover p-5 text-left group animate-slide-up"
       style={{ animationDelay: `${Math.min(index * 40, 400)}ms` }}
     >

@@ -14,8 +14,9 @@ export default function Home() {
   const [isNew, setIsNew] = useState(false);
 
   useEffect(() => {
-    fetchStats();
-    fetchConfigs();
+    fetchStats().then(() => {
+      fetchConfigs();
+    });
   }, [fetchStats, fetchConfigs]);
 
   const handleBack = useCallback(() => {

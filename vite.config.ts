@@ -36,6 +36,12 @@ export default defineConfig({
     target: 'es2020',
     cssCodeSplit: true,
     sourcemap: false,
+    modulePreload: {
+      polyfill: false,
+      resolveDependencies: (_filename, deps) => {
+        return deps.slice(0, 3);
+      },
+    },
     rollupOptions: {
       output: {
         manualChunks: {
